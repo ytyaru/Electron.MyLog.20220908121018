@@ -6,33 +6,24 @@ class Git {
         this.branch = `master`
     }
     async init(setting=null) {
-        if (setting) { this.setting = setting }
         console.log('Git.init()')
-        //if (!this.#validInit()) { return }
-        this.#valid(`git initできません！`)
+        if (setting) { this.setting = setting }
+        console.log(this.setting)
         const exists = await window.myApi.exists(`${this.dir}/${this.setting.github.repo.name}/.git`)
-        console.log(exists)
-        if(!exists) {
-            await window.myApi.mkdir(`${this.dir}/${this.setting.github.repo.name}`)
-            let res = await window.myApi.shell(`cd "${this.dir}/${this.setting.github.repo.name}/"; git init;`)
-            console.log(res.stdout)
-            console.log(`ローカルリポジトリを作成しました。`)
-            res = await this.#remoteAddOrigin()
-            console.log(res.stdout)
-        } else {
+        if (exists) {
             console.log(`${this.dir}/${this.setting.github.repo.name}/.git は既存のためgit initしません。`)
+            return exists
         }
+        console.log(exists)
+        this.#valid(`git initできません！`)
+        await window.myApi.mkdir(`${this.dir}/${this.setting.github.repo.name}`)
+        let res = await window.myApi.shell(`cd "${this.dir}/${this.setting.github.repo.name}/"; git init;`)
+        console.log(res.stdout)
+        console.log(`ローカルリポジトリを作成しました。`)
+        res = await this.#remoteAddOrigin()
+        console.log(res.stdout)
         return exists
     }
-    /*
-    async #validInit() {
-        if (!this.setting.github.username) { alert(`db/setting.jsonファイルにGitHubユーザ名をセットしてください`, true); return false; }
-        if (!this.setting.github.email) { alert(`db/setting.jsonファイルにGitHubメールアドレスをセットしてください`, true); return false; }
-        if (!this.setting.github.token) { alert(`db/setting.jsonファイルにGitHubアクセストークンをセットしてください\nrepoスコープ権限をもっている必要があります`, true); return false; }
-        if (!this.setting.github.repo.name) { alert(`db/setting.jsonファイルにGitHubリポジトリ名をセットしてください\n100字以内で英数字・記号は._-の3つのみ使用可`, true); return false; }
-        return true
-    }
-    */
     #valid(msg=null, token=false) {
         if (msg) { msg += '\n' }
         if (!this.setting.github.username) { throw new Error(`${msg}db/setting.jsonファイルにGitHubユーザ名をセットしてください`) }
@@ -42,6 +33,7 @@ class Git {
     }
     async push(message=null, setting=null) {
         if (setting) { this.setting = setting }
+        console.log(this.setting)
         this.#valid(`git pushできません！`, true)
         if (!message) { message = `追記:${new Date().toISOString()}` }
         let res = await this.#setUser()

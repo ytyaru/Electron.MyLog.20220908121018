@@ -1,7 +1,5 @@
 window.addEventListener('DOMContentLoaded', async(event) => {
     console.log('DOMContentLoaded!!');
-    console.log(Toastify);
-    Toaster.toast('テストですわ')
     await window.myApi.loadDb(`src/db/mylog.db`)
     const db = new MyLogDb()
     Loading.setup()
@@ -29,7 +27,9 @@ window.addEventListener('DOMContentLoaded', async(event) => {
         document.getElementById('post-list').innerHTML = insHtml + document.getElementById('post-list').innerHTML
         document.querySelector('#content').value = ''
         try {
-            const exists = await git.init(setting, document.getElementById('github-repo-name').value)
+            const uiSetting = await getUiSetting()
+            console.log(uiSetting)
+            const exists = await git.init(uiSetting)
             if (!exists) { // .gitがないなら
                 console.log(`リクエスト開始`)
                 console.log(setting.github.username)
@@ -39,26 +39,26 @@ window.addEventListener('DOMContentLoaded', async(event) => {
                     'name': document.getElementById('github-repo-name').value,
                     'description': setting.github.repo.description,
                     'homepage': setting.github.repo.homepage,
-                })
+                }, uiSetting)
                 console.log(res)
-                await maker.make()
-                await git.push('新規作成', setting)
-                await git.push('なぜか初回pushではasset/ディレクトリなどがアップロードされないので２回やってみる', setting) 
+                await maker.make(uiSetting)
+                await git.push('新規作成', uiSetting)
+                await git.push('なぜか初回pushではasset/ディレクトリなどがアップロードされないので２回やってみる', uiSetting) 
+                await overwriteSetting(uiSetting)
             }
-            else { await git.push(`つぶやく:${new Date().toISOString()}`) }
-        } catch (e) { Toaster.toast(e.message, true); console.error(e); }
-        //} catch (e) { Toaster.toast(e.message, true); console.error(e); console.log(e.message); }
-        //} catch (e) { Toaster.toast(e.message.replace('\n', '<br>') + '<br>aaa', true); console.error(e); console.log(e.message.replace('\n', '<br>')); }
-        //} catch (e) { Toaster.toast(e.replace('\n', '<br>'), true); console.error(e); console.log(e); }
-        //} catch (e) { Toaster.toast(e, true); console.error(e); }
+            else { await update(`つぶやく:${new Date().toISOString()}`, uiSetting) }
+        } catch (e) { Toaster.toast(e.message, true) }
     })
     document.querySelector('#delete').addEventListener('click', async()=>{
         const ids = Array.from(document.querySelectorAll(`#post-list input[type=checkbox][name=delete]:checked`)).map(d=>parseInt(d.value))
         console.debug(ids)
         await db.delete(ids)
         document.getElementById('post-list').innerHTML = await db.toHtml()
-        try { await git.push(`つぶやき削除:${new Date().toISOString()}`, setting) }
-        catch (e) { Toaster.toast(e.message, true); console.error(e); }
+        try {
+            const uiSetting = await getUiSetting()
+            console.log(uiSetting)
+            await update(`つぶやき削除:${new Date().toISOString()}`, uiSetting)
+        } catch (e) { Toaster.toast(e.message, true) }
     })
     document.querySelector('#save-setting').addEventListener('click', async()=>{
         setting = await Setting.load()
@@ -77,4 +77,42 @@ window.addEventListener('DOMContentLoaded', async(event) => {
     document.getElementById('post-list').innerHTML = await db.toHtml(document.getElementById('address').value)
     document.getElementById('content').focus()
     document.getElementById('content-length').textContent = db.LENGTH;
+    async function getUiSetting() {
+        return await Setting.obj(
+            document.querySelector('#address').value, 
+            document.querySelector('#github-username').value,
+            document.querySelector('#github-email').value,
+            document.querySelector('#github-token').value,
+            document.querySelector('#github-repo-name').value,
+        )
+    }
+    function isSetting(setting, uiSetting) {// Object.is(setting, uiSetting)だといつも上書きされてしまうので
+        console.log('isSetting')
+        console.log(setting)
+        console.log(uiSetting)
+        const a = JSON.stringify(Object.entries(setting).sort())
+        const b = JSON.stringify(Object.entries(uiSetting).sort())
+        console.log(a === b)
+        console.log(b)
+        console.log(b)
+        return a === b;
+    }
+    async function overwriteSetting(uiSetting) {// ファイル／画面UIの値が違う
+        console.log(`overwriteSetting()`, setting, uiSetting)
+        if (!isSetting(setting, uiSetting)) {
+            await Setting.save(uiSetting)
+            console.debug(`setting.jsonを上書きした。`, setting, uiSetting)
+            Toaster.toast(`設定ファイルを保存した`)
+        } else { console.log(`設定ファイルの内容が同じなので上書きせず……`, setting, uiSetting) }
+    }
+    async function update(message, uiSetting) {
+        try {
+            await window.myApi.cp(
+                `src/db/mylog.db`,
+                `dst/${setting.github.repo.name}/db/mylog.db`,
+                {'recursive':true, 'preserveTimestamps':true})
+            await git.push(message, uiSetting) 
+            await overwriteSetting(uiSetting)
+        } catch (e) { Toaster.toast(e.message, true) }
+    }
 })

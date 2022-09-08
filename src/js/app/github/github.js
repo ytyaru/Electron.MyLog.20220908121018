@@ -3,7 +3,8 @@ class GitHub {
         this.setting = setting
         this.branch = `master`
     }
-    async createRepo(params) { // https://docs.github.com/ja/rest/repos/repos#create-a-repository-for-the-authenticated-user
+    async createRepo(params, setting) { // https://docs.github.com/ja/rest/repos/repos#create-a-repository-for-the-authenticated-user
+        this.setting = setting
         console.log('GitHub.createRepo()')
         console.log(params)
         console.log(this.setting)

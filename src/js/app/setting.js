@@ -17,4 +17,13 @@ class Setting {
         return await window.myApi.basename(rootName) +`.Site` // ディレクトリ名のみ抽出
     }
     static async save(obj) { return await window.myApi.writeFile(this.PATH, JSON.stringify(obj)) }
+    static async obj(address, username, email, token, name) {
+        const json = await this.load()
+        json.mona.address = address
+        json.github.username = username
+        json.github.email = email
+        json.github.token = token
+        json.github.repo.name = name
+        return json
+    }
 }

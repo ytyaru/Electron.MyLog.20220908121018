@@ -2,8 +2,9 @@ class SiteMaker { // GitHub Pages で稼働するようファイル作成する�
     constructor(setting) {
         this.setting = setting
     }
-    async make() { // 初回にリモートリポジトリを作成するとき一緒に作成する
+    async make(setting) { // 初回にリモートリポジトリを作成するとき一緒に作成する
         console.log('----- make() start -----')
+        if (setting) { this.setting = setting }
         await Promise.all([
             //this.#cp(`lib/`),
             //this.#cp(`js/util/`),
